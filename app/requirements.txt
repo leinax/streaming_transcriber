@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+yt-dlp
+openai-whisper
+ffmpeg-python
+jinja2
+whisperx @ git+https://github.com/m-bain/whisperx.git
