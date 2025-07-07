@@ -1,6 +1,7 @@
 import os
 import tempfile
 import subprocess
+import torch
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
@@ -22,7 +23,7 @@ app.add_middleware(
 )
 
 # Modelo de transcripción
-device = "cuda" if whisperx.utils.get_device() == "cuda" else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 model = whisperx.load_model("large-v3", device=device, compute_type="float16" if device == "cuda" else "default")
 
 def download_audio(url: str) -> str:
