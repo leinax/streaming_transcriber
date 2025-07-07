@@ -70,3 +70,13 @@ async def transcribe_form(request: Request, url: str = Form(...)):
         "request": request,
         "transcription": transcription
     })
+
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    with open("app/static/index.html") as f:
+        return f.read()
