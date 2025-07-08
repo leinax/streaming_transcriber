@@ -1,17 +1,16 @@
 import os
 import tempfile
 import subprocess
-import torch
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-import whisperx
 import yt_dlp
 
-# Configurar directorios
+# Configurar app
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
 
@@ -22,9 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Modelo de transcripción
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model = whisperx.load_model("large-v3", device=device, compute_type="float16" if device == "cuda" else "default")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 def download_audio(url: str) -> str:
     """Descarga el audio desde la URL y devuelve el path al archivo WAV."""
@@ -50,6 +47,13 @@ def download_audio(url: str) -> str:
 
 def transcribe_url(url: str) -> str:
     try:
+        import torch
+        import whisperx
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        compute_type = "float16" if device == "cuda" else "default"
+        model = whisperx.load_model("large-v3", device=device, compute_type=compute_type)
+
         audio_path = download_audio(url)
         audio = whisperx.load_audio(audio_path)
         audio = whisperx.pad_or_trim(audio)
@@ -71,12 +75,8 @@ async def transcribe_form(request: Request, url: str = Form(...)):
         "transcription": transcription
     })
 
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    with open("app/static/index.html") as f:
-        return f.read()
+# Inicia el servidor en el puerto asignado por Render
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
