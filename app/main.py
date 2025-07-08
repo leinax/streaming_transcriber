@@ -73,3 +73,14 @@ async def transcribe_form(request: Request, url: str = Form(...)):
         "request": request,
         "transcription": transcription
     })
+
+# Nuevo endpoint JSON para API
+from pydantic import BaseModel
+
+class TranscribeRequest(BaseModel):
+    url: str
+
+@app.post("/api/transcribe")
+async def transcribe_api(request: TranscribeRequest):
+    transcription = transcribe_url(request.url)
+    return {"transcription": transcription}
