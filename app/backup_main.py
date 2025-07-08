@@ -1,18 +1,15 @@
 import os
-import uuid
 import tempfile
-import concurrent.futures
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
 import yt_dlp
 
-# App config
+# Configurar app
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
 
@@ -25,14 +22,8 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Thread pool executor
-executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-
-# Memoria temporal para resultados
-results = {}
-
-# ----- Funciones principales -----
 def download_audio(url: str) -> str:
+    """Descarga el audio desde la URL y devuelve el path al archivo WAV."""
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, "audio.%(ext)s")
 
@@ -66,15 +57,11 @@ def transcribe_url(url: str) -> str:
         audio = whisperx.load_audio(audio_path)
         audio = whisperx.pad_or_trim(audio)
         result = model.transcribe(audio, language=None)
-        return result.get("text", "").strip() or "[Sin texto detectado]"
+        text = result.get("text", "")
+        return text.strip() or "[Sin texto detectado]"
     except Exception as e:
         return f"Error al transcribir: {str(e)}"
 
-def background_transcription(url: str, task_id: str):
-    text = transcribe_url(url)
-    results[task_id] = text
-
-# ----- Endpoints -----
 @app.get("/", response_class=HTMLResponse)
 async def read_form(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -87,23 +74,13 @@ async def transcribe_form(request: Request, url: str = Form(...)):
         "transcription": transcription
     })
 
+# Nuevo endpoint JSON para API
+from pydantic import BaseModel
+
 class TranscribeRequest(BaseModel):
     url: str
 
 @app.post("/api/transcribe")
-async def transcribe_api(payload: TranscribeRequest):
-    task_id = str(uuid.uuid4())
-    results[task_id] = "processing"
-    executor.submit(background_transcription, payload.url, task_id)
-    return {"task_id": task_id}
-
-@app.get("/api/result/{task_id}")
-async def get_result(task_id: str):
-    if task_id not in results:
-        return JSONResponse(status_code=404, content={"error": "Task not found"})
-    
-    result = results[task_id]
-    if result == "processing":
-        return {"status": "processing"}
-    
-    return {"status": "completed", "transcription": result}
+async def transcribe_api(request: TranscribeRequest):
+    transcription = transcribe_url(request.url)
+    return {"transcription": transcription}
