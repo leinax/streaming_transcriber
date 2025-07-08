@@ -1,6 +1,5 @@
 import os
 import tempfile
-import subprocess
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
@@ -74,9 +73,3 @@ async def transcribe_form(request: Request, url: str = Form(...)):
         "request": request,
         "transcription": transcription
     })
-
-# Inicia el servidor en el puerto asignado por Render
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
