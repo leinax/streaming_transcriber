@@ -4,4 +4,4 @@ yt-dlp
 openai-whisper
 ffmpeg-python
 jinja2
-whisperx @ git+https://github.com/m-bain/whisperx.git
+whisperx @ git+https://github.com/m-bain/whisperx.gitpython-multipart
